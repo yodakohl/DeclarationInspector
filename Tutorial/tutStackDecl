@@ -1,0 +1,16 @@
+<h1>Deklaration am Stack</h1>
+
+Hier wird eine einfache Deklaration am Stack durchgeführt. <br>
+
+Der Declaration Inspector kennt nur einen lokalen Scope. <br>
+
+
+In einem echten C/C++ Programm entspricht dies einer Deklaration in einem lokalen Scope wie z.B.: <br>
+
+<pre>
+int main()
+{	
+	int i;
+}</pre>
+
+Das gilt für sämtliche Deklarationen im Declaration Inspector.

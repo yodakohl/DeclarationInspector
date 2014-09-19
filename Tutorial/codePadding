@@ -1,0 +1,9 @@
+struct unAlignedStruct
+{
+	char   a;
+	double b;
+	char   c;
+};
+
+
+unAlignedStruct theStruct;

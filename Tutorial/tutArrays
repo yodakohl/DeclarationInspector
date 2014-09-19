@@ -1,0 +1,7 @@
+<h1>Arrays</h1>
+
+
+Mehrere Elemente eines Datentyps können mithilfe von Arrays angelegt werden. <br>
+Es ist garantiert dass diese in einem Block am Speicher liegen.<br><br>
+
+Allerdings gilt das nur für virtuellen Speicher. Physikalisch könnte der Speicher anders verteilt sein.

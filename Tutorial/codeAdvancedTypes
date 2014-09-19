@@ -1,0 +1,10 @@
+signed short int a;
+signed int	b;
+signed long int	c;
+signed long long int d;
+unsigned char e;
+unsigned short int f;
+unsigned int g;
+unsigned long int h;
+unsigned long long int i;
+long double j;

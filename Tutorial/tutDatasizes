@@ -1,0 +1,13 @@
+<h1>Datentypen und Größen</h1>
+
+
+Die Größe einzelner Datentypen kann mittels des 
+Sizeof Operators ermittelt werden. 	<br><br>
+
+
+Die Größe ist hängt von der Implementierung ab, vom C/C++ Standard werden 	
+lediglich Mindestgrößen vorgegegben.<br><br>
+
+Besonders zu beachten ist der Datentyp bool, der zwar theoretisch nur ein Bit 
+benötigt, jedoch 1 Byte groß ist. 	<br><br>
+

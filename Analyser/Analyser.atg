@@ -1,0 +1,671 @@
+#include "SymbolTable.h"
+#include "DataType.h"
+#include "wchar.h"
+#include <stdio.h>
+
+#include <list>
+#include <map>
+#include <algorithm> 
+#include <string>
+
+
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+
+/* Coco\R doesn't like <> in Parameter List */
+typedef std::list<Declaration*> decllist;
+typedef std::list<int> intlist;
+
+COMPILER CSub
+
+    SymbolTable *tab;
+
+    wchar_t *globalTemplateName = 0;
+    bool globalTemplateNamePointer = false;
+    std::wstring fullTemplateName;
+    std::wstring fullTemplateDeclaration;
+
+
+
+    void Err(const wchar_t* msg) {
+        errors->Error(la->line,la->col, msg);
+    }
+
+    /* Emit error if type is already defined */
+    bool mustNotBeDefined(const wchar_t*name)
+    {
+        if(tab->isDefined(name))
+        {
+            Err(L"Datatype already used");
+            return false;
+        }
+        return true;
+    }
+
+    /* Emit error if type is not defined */
+    bool mustBeDefined(const wchar_t*name)
+    {
+        if(!tab->isDefined(name))
+        {
+            Err(L"Datatype not defined");
+            return false;
+        }
+        return true;
+    }
+
+    /* Returns true if type is classname
+        eg.
+        struct node{  // node is predefined
+            node *pleft;
+        }; 
+     */
+    bool isPredefined(const wchar_t*name)
+    {
+        if(!tab->mPreDefine)
+            return false;
+
+        if(wcscmp(name,tab->mPreDefine)!=0)
+            return false;
+
+        return true;
+    }
+
+    /* Add base Class to class */
+    void inherit(DataType *classType, wchar_t* baseClass)
+    {
+        if(!tab->isDefined(baseClass))
+        { 
+            Err(L"Cannot inherit from undefined object");
+            return;
+        }
+        
+        size_t ancestor_size = tab->getSizeOf(baseClass);
+        Declaration*ancestor = new Declaration(baseClass,baseClass, ancestor_size,la->line+1,tab->getType(baseClass));
+        classType->addMember(ancestor);
+    }
+
+    /* Add member to class */
+    void addMember( DataType *classType , Declaration *member)
+    {
+        if(classType != 0 && member != 0)
+        {
+            classType->addMember(member);
+        }
+    }
+
+    void addStlElements()
+    {
+         for(int i = 0; i < 4 ; i++){
+                if(globalTemplateNamePointer == true){
+                    Declaration *decl = new Declaration(L"element",globalTemplateName,sizeof(void*),la->line+1,tab->getType(globalTemplateName));
+                    tab->declareHeap(decl);
+                } else {
+                    Declaration *decl = new Declaration(L"element",globalTemplateName,tab->getSizeOf(globalTemplateName),la->line+1,tab->getType(globalTemplateName));
+                    tab->declareHeap(decl); 
+                }
+            }
+    }
+
+
+    void addStringElements(wchar_t*string)
+    {
+         size_t stringlen = std::char_traits<wchar_t>::length (string) -2; //Don't count apostrophes
+         for(int i = 0; i < stringlen ; i++){
+                    Declaration *decl = new Declaration(L"StringElem",L"char",tab->getSizeOf(L"char"),la->line+1,tab->getType(L"char"));
+                    tab->declareHeap(decl); 
+         }
+    }
+
+
+    /* Get size of dimension list. Array [3][2] returns 6 */
+    int getDimensionSize(intlist *dimensions)
+    {
+        int arraySize = 1;
+        for (auto it : *dimensions)
+            arraySize *= it;
+        return arraySize;
+    }
+    
+    /*Get Index of Array Element 
+      Row-major order
+
+    eg Array [3][2]
+    Element 6 for dimension 0 returns 2
+    */
+    
+    int getElementId( intlist *dimensions, int elem,int dimension)
+    {    
+        //int mod = 1;
+        auto it = dimensions->begin();
+        for (int i = 0; i < dimension ; i++)
+        {
+            it++;
+        }
+        int mod = *it;
+        it++;
+
+        int tmpCount = 1;
+        for (;it != dimensions->end(); it++)
+        {
+            tmpCount *= *it;
+        }
+        return (elem / tmpCount)%mod;
+    }
+
+
+    /* Add Array Elements to declaration details  */
+    void addArrayElements(Declaration *decl, intlist *dimensions  )
+    {
+        
+        int dimensionCount = dimensions->size();
+        //Für Dimension 1 nichts hinzufügen
+        if(dimensionCount == 0)
+            return;
+
+        if(dimensionCount == 1 && (*dimensions->begin()) == 1)
+            return;
+
+        decl->setIsArray(true);
+        int arraySize = getDimensionSize(dimensions);
+
+        for(int i = 0 ; i < arraySize ; i++)
+        {
+            wchar_t elementName[255] = L"element [";
+            for ( int j = 0 ; j < dimensionCount ; j++)
+            {
+                wchar_t buf[16];
+                coco_swprintf(buf,16, L" %d", getElementId(dimensions,i,j));
+                wcscat(elementName, buf);
+            }
+            wcscat(elementName, L" ]");
+
+
+            
+            Declaration * element;
+            if(decl-> mIsPointer == true){
+                element = new Declaration(elementName,decl->mType,sizeof(void*),la->line+1,tab->getType(decl->mType));
+            } else {
+                element = new Declaration(elementName,decl->mType,tab->getSizeOf(decl->mType),la->line+1,tab->getType(decl->mType));
+            }
+            decl->addDetail(element);
+        }
+    }
+
+    /* Add padding to Class or Struct and define it at Symbol Table */
+    void finishAndDefine( DataType *classType)
+    {
+        if(classType != 0)
+        {
+            classType->finish(); tab->define(classType);
+        }
+    }
+
+    // Check if declaration has type
+    bool  equals(wchar_t *A, Declaration  *B)
+    {
+        if(wcscmp(A,B->mType) == 0)
+            return true;
+        return false;
+    }
+    
+    // Check if Assignment matches Type
+    bool typeMatch(wchar_t *typeA, Declaration *typeB)
+    {    
+        if (!typeA || !typeB){
+            return false;
+        }
+
+        if ( wcscmp(typeA ,L"bool") == 0) {
+            if (equals(L"bool",typeB) | equals(L"int",typeB))
+                return true;
+            return false;
+        } 
+        else if ( wcscmp(typeA ,L"int") == 0) {
+            if (equals(L"bool",typeB) | equals(L"int",typeB))
+                return true;
+            return false;
+        }
+        else if ( wcscmp(typeA ,L"char") == 0) {
+            if (equals(L"char",typeB) | equals(L"int",typeB))
+                return true;
+            return false;
+        }
+        else if ( wcscmp(typeA ,L"double") == 0) {
+            if (equals(L"double",typeB) | equals(L"float",typeB) | equals(L"int",typeB))
+                return true;
+            return false;
+        }
+        else if ( wcscmp(typeA ,L"float") == 0) {
+            if (equals(L"double",typeB) | equals(L"float",typeB) | equals(L"int",typeB))
+                return true;
+            return false;
+        }
+        else if ( wcscmp(typeA ,L"string") == 0) {
+            if (equals(L"string",typeB))
+                return true;
+            return false;
+        }
+        else if ( wcscmp(typeA ,L"long") == 0) {
+            if (equals(L"double",typeB) | equals(L"int",typeB))
+                return true;
+            return false;
+        }
+        else if ( wcscmp(typeA ,L"short") == 0) {
+            if (equals(L"long",typeB) | equals(L"int",typeB) | equals(L"short",typeB))
+                return true;
+            return false;
+        }
+        else if ( wcscmp(typeA ,L"void") == 0) {
+            return false;
+        }
+        else if ( wcscmp(typeA ,L"long double") == 0) {
+            if (equals(L"double",typeB) | equals(L"long double",typeB) | equals(L"int",typeB)| equals(L"float ",typeB)| equals(L"long long",typeB))
+                return true;
+            return false;
+        }
+        else {
+            if(equals(typeA,typeB))
+                return true;
+            return false;
+        }
+        return true;
+    }
+
+
+
+/*--------------------------------------------------------------------------*/
+CHARACTERS
+    letter = 'A'..'Z' + 'a'..'z' + '_'.
+    digit  = '0'..'9'.
+    cr  = '\r'.
+    lf  = '\n'.
+    tab = '\t'.
+    octal_digit = '0' .. '7'.
+    nzdigit    = '1'..'9'.
+    hex        = digit + 'a'..'f' + 'A'..'F'.
+    notQuote   = ANY - '"' - "\r\n".
+    notApo     = ANY - '\'' - "\r\n".
+
+TOKENS
+    ident  = letter {letter | digit}.
+    string_literal   = '"' {notQuote} '"'. 
+    character_literal  = '\'' notApo {notApo} '\''.
+
+    floating_literal = ( '.' digit {digit} [('e'|'E')  ['+'|'-'] digit {digit}]
+                         | digit {digit} '.' {digit} [('e'|'E')  ['+'|'-'] digit {digit}]
+                         | digit {digit} ('e'|'E')  ['+'|'-'] digit {digit}
+                       ) ['f'|'l'|'F'|'L'].
+
+    integer_literal   = ( digit {digit} | '0' {octal_digit} | ("0x"|"0X") hex {hex}) {'u'|'U'|'l'|'L'}.
+
+PRAGMAS
+    //---- preprocessor commands used to catch keywords outside of language subset
+    asm_Keyword                = "asm" .                (. Err(L"Keyword not in Subset"); .)
+    do_Keyword                 = "do" .                 (. Err(L"Keyword not in Subset"); .)
+    if_Keyword                 = "if" .                 (. Err(L"Keyword not in Subset"); .)
+    return_Keyword             = "return" .             (. Err(L"Keyword not in Subset"); .)
+    typedef_Keyword            = "typedef" .            (. Err(L"Keyword not in Subset"); .)
+    auto_Keyword               = "auto" .               (. Err(L"Keyword not in Subset"); .)
+    inline_Keyword             = "inline" .             (. Err(L"Keyword not in Subset"); .)
+    typeid_Keyword             = "typeid" .             (. Err(L"Keyword not in Subset"); .)
+    dynamic_cast_Keyword       = "dynamic_cast" .       (. Err(L"Keyword not in Subset"); .)
+    typename_Keyword           = "typename" .           (. Err(L"Keyword not in Subset"); .)
+    else_Keyword               = "else" .               (. Err(L"Keyword not in Subset"); .)
+    sizeof_Keyword             = "sizeof" .             (. Err(L"Keyword not in Subset"); .)
+    break_Keyword              = "break" .              (. Err(L"Keyword not in Subset"); .)
+    case_Keyword               = "case" .               (. Err(L"Keyword not in Subset"); .)
+    mutable_Keyword            = "mutalbe" .            (. Err(L"Keyword not in Subset"); .)
+    static_Keyword             = "static" .             (. Err(L"Keyword not in Subset"); .)
+    catch_Keyword              = "catch" .              (. Err(L"Keyword not in Subset"); .)
+    explicit_Keyword           = "explicit" .           (. Err(L"Keyword not in Subset"); .)
+    namespace_Keyword          = "namespace" .          (. Err(L"Keyword not in Subset"); .)
+    static_cast_Keyword        = "static_cast" .        (. Err(L"Keyword not in Subset"); .)
+    using_Keyword              = "using" .              (. Err(L"Keyword not in Subset"); .)
+    export_Keyword             = "export" .             (. Err(L"Keyword not in Subset"); .)
+    virtual_Keyword            = "virtual" .            (. Err(L"Keyword not in Subset"); .)
+    extern_Keyword             = "extern" .             (. Err(L"Keyword not in Subset"); .)
+    operator_Keyword           = "operator" .           (. Err(L"Keyword not in Subset"); .)
+    switch_Keyword             = "switch" .             (. Err(L"Keyword not in Subset"); .)
+    template_Keyword           = "template" .           (. Err(L"Keyword not in Subset"); .)
+    volatile_Keyword           = "volatile" .           (. Err(L"Keyword not in Subset"); .)
+    const_Keyword              = "const" .              (. Err(L"Keyword not in Subset"); .)
+    const_cast_Keyword         = "const_cast" .         (. Err(L"Keyword not in Subset"); .)
+    this_Keyword               = "this" .               (. Err(L"Keyword not in Subset"); .)
+    continue_Keyword           = "continue" .           (. Err(L"Keyword not in Subset"); .)
+    for_Keyword                = "for" .                (. Err(L"Keyword not in Subset"); .)
+    throw_Keyword              = "throw" .              (. Err(L"Keyword not in Subset"); .)
+    while_Keyword              = "while" .              (. Err(L"Keyword not in Subset"); .)
+    default_Keyword            = "default" .            (. Err(L"Keyword not in Subset"); .)
+    friend_Keyword             = "friend" .             (. Err(L"Keyword not in Subset"); .)
+    register_Keyword           = "register" .           (. Err(L"Keyword not in Subset"); .)
+    delete_Keyword             = "delete" .             (. Err(L"Keyword not in Subset"); .)
+    goto_Keyword               = "goto" .               (. Err(L"Keyword not in Subset"); .)
+    reinterpret_cast_Keyword   = "reinterpret_cast" .   (. Err(L"Keyword not in Subset"); .)
+    try_Keyword                = "try" .                (. Err(L"Keyword not in Subset"); .)
+
+
+
+COMMENTS FROM "/*" TO "*/" NESTED
+COMMENTS FROM "//" TO lf
+
+IGNORE cr + lf + tab
+
+
+PRODUCTIONS
+
+
+/*
+   Main Entry Point
+*/
+CSub   (. decllist decl; .)
+= {
+    ( simple_declaration<&decl>  (. for (auto it : decl){tab->declareStack(it);} decl.clear(); .) 
+    | struct_definition 
+    | class_definiton
+    | enum_specifier 
+    | union_definition 
+  //  | stl_string 
+    | ";"
+    )
+ }.
+
+
+
+Ident<wchar_t* &name>
+= ident                              (. name =  tab->string_create(t->val); .).
+
+literal<Declaration* &decl>
+= integer_literal                    (.decl = new Declaration(L"int",L"int",tab->getSizeOf(L"int"),la->line,tab->getType(L"int")); .)
+| ("true" | "false")                 (.decl = new Declaration(L"bool",L"bool",tab->getSizeOf(L"bool"),la->line,tab->getType(L"bool")); .)
+| character_literal                  (.decl = new Declaration(L"char",L"char",tab->getSizeOf(L"char"),la->line,tab->getType(L"char")); .)
+| string_literal                     (.decl = new Declaration(L"string",L"string",tab->getSizeOf(L"string"),la->line,tab->getType(L"string"));
+                                      addStringElements(t->val);
+                                    .)
+| floating_literal                   (.decl = new Declaration(L"float",L"float",tab->getSizeOf(L"float"),la->line,tab->getType(L"float")); .)
+.
+
+
+
+
+new_expression<Declaration* &decl>                      (. wchar_t* type = 0; int line = 0; std::list<int> dimensions; .)
+=( "new" type_specifier<type>                           (. line = la->line; .)
+    array_bracket<dimensions>
+                                                        (. if(type && tab->isDefined(type)){
+                                                              Declaration *mObj = new Declaration(type,type,tab->getSizeOf(type)*getDimensionSize(&dimensions),line+1,tab->getType(type));
+                                                              addArrayElements(mObj,&dimensions);
+                                                              tab->declareHeap(mObj); 
+                                                              decl = mObj;
+                                                        } else {
+                                                              Err(L"Datatype not defined");
+                                                              decl = 0;
+                                                        }
+
+                                                        if(globalTemplateName != 0){
+                                                               addStlElements();
+                                                               if(fullTemplateDeclaration != fullTemplateName)
+                                                                    Err(L"Template Types do not match");
+                                                        }
+
+                                                       .)
+).
+
+
+array_bracket<intlist &dimensions> (. int dim = 0;  .)
+=     {"[" 
+        integer_literal (. swscanf(t->val, L"%d", &dim);  dimensions.push_back(dim); .)
+    "]" }
+.
+
+
+
+
+assignment_operator  = 
+"=" 
+|"*="    (. Err(L"Operator *=  not in Subset"); .)
+|"/="    (. Err(L"Operator /=  not in Subset"); .)
+|"%="    (. Err(L"Operator %=  not in Subset"); .)
+|"+="    (. Err(L"Operator +=  not in Subset"); .)
+|"-="    (. Err(L"Operator -=  not in Subset"); .)
+|">>="   (. Err(L"Operator >>= not in Subset"); .)
+|"<<="   (. Err(L"Operator <<= not in Subset"); .)
+|"&="    (. Err(L"Operator &=  not in Subset"); .) 
+|"^="    (. Err(L"Operator ^=  not in Subset"); .)
+|"|="    (. Err(L"Operator |=  not in Subset"); .)
+.
+
+
+declarator<Declaration*&tmpDecl, wchar_t*&type> (. bool isPointer = false; int line = 0; std::list<int> dimensions; wchar_t* name = 0; .)
+=(
+                                         (. if (type == 0) {tmpDecl = 0; return; } .)
+
+    {
+    "*"                                  (. isPointer = true;        .) 
+    }
+                                         (. if(isPredefined(type) && isPointer == false) {Err(L"Predefinition only possible with pointers"); tmpDecl = 0; return; } .) 
+    Ident<name>                          (. line = la->line; .)
+        array_bracket<dimensions> 
+                                         //Store full Template String for Assignment comparison
+                                         (. if(globalTemplateName != 0 ) { fullTemplateDeclaration = fullTemplateName; fullTemplateName.clear();  } .)
+    unary_expression<type,isPointer>
+
+    (.
+        if(isPointer){
+            tmpDecl = new Declaration(name,L"Pointer",sizeof(void*)*getDimensionSize(&dimensions),line+1,tab->getType(L"char"));
+            tmpDecl->setIsPointer(true);
+            addArrayElements(tmpDecl,&dimensions);
+        } else {
+            tmpDecl = new Declaration(name,type,tab->getSizeOf(type)*getDimensionSize(&dimensions),line+1,tab->getType(type)); 
+            addArrayElements(tmpDecl,&dimensions);
+        }
+
+        // Add Elements to STL Container
+        if(globalTemplateName != 0 && (isPointer == false)){
+            addStlElements();
+           
+        }
+
+        fullTemplateDeclaration.clear();
+        fullTemplateName.clear();
+        globalTemplateNamePointer = false;
+        globalTemplateName = 0; 
+    .)
+
+).
+
+
+template_specifier   (. wchar_t *templateName = 0; .)
+= (                                   (. fullTemplateName.clear(); .)
+    "<" type_specifier<templateName>  (. if(templateName) fullTemplateName.append(templateName); .)
+    {              
+        "*"        (. globalTemplateNamePointer = true; fullTemplateName.append(L"*"); .) 
+    } ">"          (. globalTemplateName = templateName; .)
+                   (. mustBeDefined(templateName); .)
+).
+
+type_specifier<wchar_t* &name>
+= (
+       long_type<name>
+     | Ident<name> 
+     | (stl_container<name> template_specifier)
+     | stl_string<name>
+     (. mustBeDefined(name); .)
+).
+
+unary_expression<wchar_t*&type ,bool isPointer> (. Declaration *assignmentType; .)
+= (
+    [  assignment_operator
+        (
+         literal<assignmentType>            (. if(!typeMatch(type, assignmentType)){Err(L"Type Mismatch");} .)
+        |
+         new_expression<assignmentType>     (. if(isPointer == false){Err(L"Pointer Required "); return;}  .)
+                                            (. if(!typeMatch(type, assignmentType)){Err(L"Type Mismatch");} .)
+        )
+    ]
+).
+
+    
+simple_declaration<decllist*decl> (. wchar_t* type = 0; Declaration* tmpDecl ; .)
+= (
+    type_specifier<type>                      (. if( (!isPredefined(type)) && (!mustBeDefined(type)) ){Err(L"Type Not Defined"); return;} .)
+
+    declarator<tmpDecl,type>                  (. if(tmpDecl) decl->push_back(tmpDecl); .)
+    { 
+        ','declarator<tmpDecl,type>           (. if(tmpDecl) decl->push_back(tmpDecl); .)
+    }
+    
+    ";"
+).
+
+
+
+
+
+/*
+   Enum Definition
+   Size of enum is size of int 
+*/
+
+enum_specifier                                                 (. wchar_t* name = 0; .)
+=( "enum"
+    Ident<name>                                                (. mustNotBeDefined(name); .)
+    "{"
+        enumerator_definition  { "," enumerator_definition }
+
+    "};"                                                       (. tab->define(name,tab->getSizeOf(L"int"),0); .)
+
+).
+
+enumerator_definition                   (.  wchar_t* name = 0;  Declaration* decl = 0;  .)
+ = (Ident<name>) [ 
+    "=" literal<decl>                   (. if(decl && (wcscmp((decl)->mType,L"int") != 0)) {Err(L"Must be Integer");} .)
+    ] 
+.
+
+
+struct_definition                       (. wchar_t* name = 0;  decllist decl; DataType *pStruct = 0; .)
+= ( "struct"
+    Ident<name>                         (. mustNotBeDefined(name); tab->mPreDefine =  tab->string_create(name); .)
+    "{"                                 (. pStruct = new DataType(name,0,0); .)
+        {
+            simple_declaration<&decl>   (. for (auto it : decl){addMember(pStruct,it);} decl.clear(); .)
+        }
+    "};"                                (. finishAndDefine(pStruct); tab->mPreDefine = 0; .)
+  ).
+
+
+
+access_specifier = ("public" | "private" | "protected").
+
+class_head<DataType *&pStruct>          (.  wchar_t* name = 0;  wchar_t* baseclass = 0; .)
+=     "class"
+    Ident<name>                         (. if(mustNotBeDefined(name)){pStruct = new DataType(name,0,0);}  tab->mPreDefine =  tab->string_create(name);  .)
+    [
+        ":"  [ access_specifier ] 
+            Ident<baseclass>            (. inherit(pStruct,baseclass); .)
+            { 
+                "," Ident<baseclass>    (. inherit(pStruct,baseclass); .)
+            }    
+    ]
+.
+
+class_definiton (. decllist decl; DataType *pStruct = 0; .)
+= ( 
+    class_head<pStruct>
+    "{"
+        { 
+            simple_declaration<&decl>    (. for (auto it : decl){addMember(pStruct,it);} decl.clear(); .)
+            | ( access_specifier ":")
+        }
+    "};"                                 (. finishAndDefine(pStruct); tab->mPreDefine = 0; .)
+).
+
+
+/*
+   Union Definition
+   Size of union is size of biggest component
+*/
+
+union_definition                       (. wchar_t* name = 0;decllist decl; std::list<int> mSizes; .)
+=( "union"
+    Ident<name>                        (. mustNotBeDefined(name); .)
+    "{"
+        simple_declaration<&decl>      (. for (auto it : decl){mSizes.push_back(tab->getSizeOf(it->mType));} .)
+        {
+                                       (. decl.clear(); .)
+            simple_declaration<&decl>  (. for (auto it : decl){mSizes.push_back(tab->getSizeOf(it->mType));} .)
+        } 
+    "};"                               (.
+                                           int size = *std::max_element(mSizes.begin(), mSizes.end());
+                                           int alignment = 0;
+                                           tab->define(name,size,alignment); 
+                                       .)
+
+).
+
+
+
+/*
+   Resolves LL1 Conflicts for STL Containers to be not treated as common declarations
+*/
+stl_container <wchar_t* &name>
+=     "std::vector"     (. name =  tab->string_create(L"vector");  .)
+    | "std::list"       (. name =  tab->string_create(L"list");    .)
+    | "std::queue"      (. name =  tab->string_create(L"queue");   .)
+    | "std::stack"      (. name =  tab->string_create(L"stack");   .)
+    | "std::array"      (. name =  tab->string_create(L"array");   .)
+    | "std::deque"      (. name =  tab->string_create(L"deque");   .)
+/*    Not supported yet
+    | "std::set"        (. name =  tab->string_create(L"vector");  .)
+    | "std::multiset"   (. name =  tab->string_create(L"multiset"); .)
+    | "std::map"        (. name =  tab->string_create(L"map");      .)
+    | "std::multimap"   (. name =  tab->string_create(L"multimap"); .)
+*/
+.
+
+
+stl_string<wchar_t* &name>
+=
+	"std::string"       (. name =  tab->string_create(L"string");  .)
+.
+
+/*
+   Resolves LL1 Conflicts for Datatypes that are longer than one indent
+*/
+long_type <wchar_t* &name>
+=
+( ["signed"] (
+          ("char")              (. name =  tab->string_create(L"char"); .)
+        | ("short" ["int"])     (. name =  tab->string_create(L"short"); .)
+        | ("int")               (. name =  tab->string_create(L"int"); .)
+        | ("double")            (. name =  tab->string_create(L"double"); .)
+        | ("long"         
+            ( 
+              ["int" ]          (. name =  tab->string_create(L"long"); .)
+            | ("long" ["int"])  (. name =  tab->string_create(L"long long"); .)
+            | "double"          (. name =  tab->string_create(L"long double"); .)
+            )
+        )
+    )
+) 
+|
+( "unsigned" ( 
+          ("char")             (. name =  tab->string_create(L"char"); .)
+        | ("short" "int")      (. name =  tab->string_create(L"short"); .)
+        | ("int")              (. name =  tab->string_create(L"int"); .)
+        | ("long" 
+            (
+              ( "int")         (. name =  tab->string_create(L"long"); .)
+            | ( "long" "int")  (. name =  tab->string_create(L"long long"); .)
+            )
+        )
+    )
+)
+
+.
+
+
+END CSub.
+
+
+
+
+

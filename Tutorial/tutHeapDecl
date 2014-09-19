@@ -1,0 +1,10 @@
+<h1>Deklaration am Heap</h1>
+
+
+Die Lebensdauer von Variablen am Stack enden mit verlassen des Scopes indem sie definiert wurden.<br><br>
+
+Sollen Objekte erstellt werden dessen Lebensdauer manuell verwaltet wird, können diese am Heap deklariert werden.<br><br>
+
+Hier wird ein Integer dynamisch angelegt.
+Der Zeiger auf diese Variable bleibt in diesem Fall jedoch am Stack 
+und unterliegt auch der Lebensdauer einer Stackvariable. <br><br>

@@ -1,0 +1,8 @@
+class tClass{
+
+private:
+	int  mA;
+	char mB;
+};
+
+tClass aClass;

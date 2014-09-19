@@ -1,0 +1,8 @@
+<h1>Vererbung</h1>
+
+
+Klassen können von Basisklassen erben.<br><br>
+
+Zur Größe der abgeleiteten Klasse addiert sich die Größe der Basisklasse.
+
+

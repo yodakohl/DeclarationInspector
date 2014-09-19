@@ -1,0 +1,7 @@
+<h1>Strukturen</h1>
+
+Mittels Strukturen lassen sich Variablen gruppieren. <br><br>
+
+Bewegen sie die Maus über die Darstellung am Stack um den internen Aufbau der Struktur zu sehen. <br><br>
+
+Das 3 Byte große Padding Feld wird später erklärt.<br>

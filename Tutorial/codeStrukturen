@@ -1,0 +1,6 @@
+struct tStruct{
+	int  mA;
+	char mB;
+};
+
+tStruct aStruct;

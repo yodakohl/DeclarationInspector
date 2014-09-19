@@ -1,0 +1,16 @@
+<h1>Mehrdimensionale Arrays</h1>
+
+Mehrdimensionale Arrays sind in C nur syntaktischer Zucker.<br>
+In Wirklichkeit wird ein durchgehender Speicherblock angelegt.
+
+Die Deklarationen 
+
+<pre>
+	int i[8];
+	int i[2][4];
+</pre>
+
+besitzen den gleichen Speicheraufbau. Im letzeren Fall wird dem Benutzer 
+jedoch die Adressierung einzelner Elemente vereinfacht.
+
+

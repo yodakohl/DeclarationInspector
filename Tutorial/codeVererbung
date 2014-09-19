@@ -1,0 +1,20 @@
+class firstClass
+{
+
+private:
+	int  mA;
+	char mB;
+
+};
+
+
+
+class secondClass: public firstClass 
+{
+
+private:
+	int  mC;
+	char mD;
+};
+
+secondClass myClass;

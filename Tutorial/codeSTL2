@@ -1,0 +1,1 @@
+std::vector<int*> *myVector = new std::vector<int*>;

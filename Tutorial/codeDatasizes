@@ -1,0 +1,7 @@
+bool    aBool;
+char    aChar;
+short   aShort;
+int     aInt;
+float   aFloat;
+double  aDouble;
+long    aLong;

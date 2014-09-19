@@ -1,0 +1,7 @@
+union tUnion
+{
+	int    mA;
+	double mB;
+};
+
+tUnion theUnion;

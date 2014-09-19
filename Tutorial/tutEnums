@@ -1,0 +1,11 @@
+<h1>Enumerations Typ</h1>
+
+
+Intern wird der Enumerations Typ durch einen Integer repräsentiert.<br><br>
+Der Enumerationstyp hat gegenüber dem Integer den Vorteil dass 
+eine Typüberprüfung durchgeführt werden kann. 
+
+
+Gegenüber einem Define hat er den Vorteil dass er einen Scope hat. <br><br>
+
+Der Declaration Inspector verwendet den C++/Enumerator Typ bei dem das Schlüsselwort enum nicht vor einer Deklaration stehen muss.

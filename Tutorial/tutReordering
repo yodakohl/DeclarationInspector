@@ -1,0 +1,9 @@
+<h1>Byte Reordering</h1>
+
+
+Die Struktur aus dem vorherigen Schritt kann besser definiert werden. <br><br>
+
+Durch Umordnen der Member-Variablen kann der Speicherbedarf verringert werden. <br><br>
+
+Die kleinste Darstellung wird erreicht wenn die Member vom Größten bis zum kleinsten absteigend sortiert werden. <br><br>
+

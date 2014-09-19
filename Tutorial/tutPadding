@@ -1,0 +1,11 @@
+<h1>Padding Bytes</h1>
+
+Daten sind in C und C++ prinzipiell ausgerichtet. Alle Datentypen haben 
+sogenannte Alignment Boundaries. Seit C++11 können diese mit alignof(type) 
+zur Laufzeit ermittelt werden.	<br><br>
+
+Um die Alignment Boundaries einzuhalten müssen bei Bedarf Padding Bytes
+eingefügt werden. <br><br>
+
+Schlecht gewählte Datenstrukturen können einen großen Padding Overhead haben.
+Obige Deklaration ist ein gutes Beispiel hierfür.

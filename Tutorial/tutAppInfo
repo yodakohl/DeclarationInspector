@@ -1,0 +1,20 @@
+<h1> Anwendungs Erklärung </h1>
+
+Der Declaration Inspector visualisiert die Speicherdarstellung von 
+Variablendeklarationen in C/C++.<br> <br>
+
+Diese Anwendung verarbeitet nur eine Untermenge aus C/C++. <br>
+Es wird keine Laufzeitanalyse durchgeführt, deshalb sind Statements wie Schleifen
+oder Bedingungen hier fehl am Platz. <br> <br>
+
+Das Fenster über dem Tutorial ist der Editor. 
+Hier können sie ihre Deklarationen und Definitionen eingeben. <br> <br>
+
+Auf der rechten Seite befinden sich die Fenster zur Darstellung des Speicheraufbaus.
+Es stehen drei Speicherbereiche zur Verfügung: <br> <br>
+
+
+Stack: Alle Deklarationen die am Stack allokiert werden sind hier dargestellt.  <br>
+Heap: Alle Deklarationen die am Heap allokiert werden sind hier dargestellt.  <br>
+Detail: Wenn sie die Maus über eine Deklaration eines komplexen Datentyps bewegen,
+wird diese in diesem Fenster detailliert dargestellt.

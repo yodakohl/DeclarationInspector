@@ -1,0 +1,12 @@
+<h1>Unions</h1>
+
+
+In Unions teilen sich alle Member die selbe Startadresse.<br><br>
+
+
+Die Größe des Unions enstpricht der Größe der größen Member Variable.<br><br>
+
+Mit Unions kann ein Wert auf unterschiedliche Weise interpretiert werden. Alternativ kann man hier 
+Speicherplatz gespart werden wenn sichergestellt ist, dass immer nur ein Feld belegt ist.
+
+

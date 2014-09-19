@@ -1,0 +1,20 @@
+struct unAlignedStruct
+{
+	char   a;
+	double b;
+	char   c;
+};
+
+
+struct AlignedStruct
+{
+	char   a;
+	char   c;
+	double b;
+};
+
+
+
+unAlignedStruct theUnAlignedStruct;
+AlignedStruct theAlignedStruct;
+

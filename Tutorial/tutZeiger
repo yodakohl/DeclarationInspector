@@ -1,0 +1,10 @@
+<h1>Zeiger</h1>
+
+Zeiger haben prinzipiell die Größe der Architekturbreite 
+also bei 32Bit Systemen 4 Byte und bei 64Bit Systemen 8 Bytes. <br><br>
+
+Betrachten wir die Deklaration von void **b.  <br>
+Auch hier ist b nur ein normaler Zeiger auf einen Speicherbereich. <br><br>
+
+Auf dem Zielbereich liegt jedoch wieder ein Zeiger.
+

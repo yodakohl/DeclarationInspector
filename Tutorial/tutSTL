@@ -1,0 +1,18 @@
+<h1>Standard Template Library (1)</h1>
+
+Obwohl die STL nicht zum Sprachkern von C++ gehört unterstützt der Declaration Inspector 
+sequenzielle Kontainer der STL.<br><br>
+
+Dazu gehören 
+<pre>
+	std::vector 
+	std::list
+	std::queue
+	std::array
+</pre>
+<br>
+Hier wird ein Vektor von Int-Zeigern auf dem Stack angelegt.<br>
+Nachdem der Deklaration Inspector keine Laufzeit hat werden zur Demonstration
+automatisch vier Elemente hinzugefügt. STL Kontainer sind Template Klassen und push_back eine Klassenfunktion. 
+Wie und wo die Elemente hinzugefügt werden ist Implementierungsabhängig. Alle STL Kontainer allokieren ihre Elemente 
+jedoch am Heap.Um häufige Neuallokationen zu vermeiden wird üblicherweise mehr Speicher angelegt als gebraucht wird.

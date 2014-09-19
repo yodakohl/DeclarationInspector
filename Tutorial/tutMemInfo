@@ -1,0 +1,10 @@
+<h1>Speicherdarstellung</h1>
+
+Jedes Speicherfenster besitzt am linken Rand einen zebrafarbigen
+Indikatorstreifen. Ein Abschnitt ist ein Byte. <br><br>
+
+
+Wenn sie die Maus über eine Deklaration im Stack oder Heap Fenster bewegen
+wird die Zeile an der sie deklariert wird im Editor grün hervorgehoben.  <br><br>
+
+
