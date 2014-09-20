@@ -7,13 +7,13 @@ Releases are avaliable on [Dropbox](https://www.dropbox.com/sh/3gbyl0s17h2vlut/A
 
 
 # Build Requirements
-*Boost
-*Qt
-*CMake
+* Boost
+* Qt
+* CMake
 
 # Compilation
-*Change to build folder
-*cmake ../../ ; make ; make install
+* Change to build folder
+* cmake ../../ ; make ; make install
 
 
 
