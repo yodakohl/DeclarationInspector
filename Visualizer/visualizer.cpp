@@ -23,6 +23,7 @@ static inline void timestop()
 
 Visualizer::Visualizer(QWidget *parent) :QMainWindow(parent)
 {
+	mTut = 0;
 	mLayout = new QGridLayout(this);
 	mEditWidget = new QWidget(this);
 	mEditor = new editor(this);
@@ -176,10 +177,23 @@ void Visualizer::setText(QString text)
 	mEditor->insertPlainText(text);
 }
 
-void Visualizer::startTutorial(){
-	tutorial *mTut = new tutorial(this,this);
-	mLayout->addWidget(mTut,1,0);
+void Visualizer::startTutorial()
+{
+	if(mTut == 0){
+		mTut = new tutorial(this,this);
+		mLayout->addWidget(mTut,1,0);
+	}
 }
+
+
+void Visualizer::stopTutorial()
+{
+	if(mTut){
+		mTut->close();
+	}
+	mTut = 0;
+}
+
 
 void Visualizer::quit()
 {

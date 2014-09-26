@@ -20,6 +20,7 @@
 #include "commonmemory.h"
 #include "editor.h"
 
+class tutorial;
 
 class Visualizer : public QMainWindow
 {
@@ -31,7 +32,7 @@ public:
 	void createMenu();
 	void setText(QString text);
 	void repaintWidgets();
-	
+	void stopTutorial();
 
 
 private slots:
@@ -40,7 +41,7 @@ private slots:
 	void on_text_changed();
 	void quit();
 	void startTutorial();
-
+	
 	void showStack();
 	void showHeap();
 	void showClass();
@@ -67,6 +68,7 @@ private:
 	memoryArea *mHeap;
 	memoryArea *mClass;
 
+	tutorial *mTut;
 	Analyser *mAnalyser;
 	SymbolTable *mSymbols;
 

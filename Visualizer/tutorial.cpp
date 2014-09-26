@@ -39,7 +39,8 @@ tutorial::tutorial(Visualizer *visualizer, QWidget *parent) :
 
 void tutorial::closeTut()
 {
-	this->close();
+	mVisualizer->stopTutorial();
+	//this->close();
 }
 
 
